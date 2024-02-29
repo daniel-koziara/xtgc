@@ -477,34 +477,34 @@ contract xTGC is Ownable, ERC20 {
 
         if (canSwap && !swapping && isAutomatedMarketMakerPairs[to]) {
             uint256 tokenToLiqudity = liquidityFeeTotal.div(2);
-            uint256 tokenToDAO = DAOFeeTotal;
-            uint256 tokenToSwap = tokenToLiqudity.add(tokenToDAO);
+            // uint256 tokenToDAO = DAOFeeTotal;
+            uint256 tokenToSwap = tokenToLiqudity; //.add(tokenToDAO);
 
             if (tokenToSwap >= swapTokensAtAmount) {
                 swapping = true;
-                swapTokensForPLS(swapTokensAtAmount);
-                uint256 PLSBalance = address(this).balance;
+                swapTitanXForXTGC(swapTokensAtAmount);
+                // uint256 PLSBalance = address(this).balance;
 
-                uint256 liqudityPart = PLSBalance.mul(tokenToLiqudity).div(
-                    tokenToSwap
-                );
-                uint256 DAOPart = PLSBalance - liqudityPart;
+                // uint256 liqudityPart = PLSBalance.mul(tokenToLiqudity).div(
+                //     tokenToSwap
+                // );
+                // uint256 DAOPart = PLSBalance - liqudityPart;
 
-                if (liqudityPart > 0) {
-                    uint256 liqudityToken = swapTokensAtAmount
-                        .mul(tokenToLiqudity)
-                        .div(tokenToSwap);
-                    addLiquidity(liqudityToken, liqudityPart);
-                    liquidityFeeTotal = liquidityFeeTotal
-                        .sub(liqudityToken)
-                        .sub(liqudityToken);
-                }
-                if (DAOPart > 0) {
-                    (bool sent, ) = DAOContract.call{value: DAOPart}("");
-                    DAOFeeTotal = DAOFeeTotal.sub(
-                        swapTokensAtAmount.mul(tokenToDAO).div(tokenToSwap)
-                    );
-                }
+                // if (liqudityPart > 0) {
+                //     uint256 liqudityToken = swapTokensAtAmount
+                //         .mul(tokenToLiqudity)
+                //         .div(tokenToSwap);
+                //     addLiquidity(liqudityToken, liqudityPart);
+                //     liquidityFeeTotal = liquidityFeeTotal
+                //         .sub(liqudityToken)
+                //         .sub(liqudityToken);
+                // }
+                // if (DAOPart > 0) {
+                //     (bool sent, ) = DAOContract.call{value: DAOPart}("");
+                //     DAOFeeTotal = DAOFeeTotal.sub(
+                //         swapTokensAtAmount.mul(tokenToDAO).div(tokenToSwap)
+                //     );
+                // }
                 swapping = false;
             }
         }
@@ -755,14 +755,19 @@ contract xTGC is Ownable, ERC20 {
         emit Transfer(sender, recipient, tTransferAmount);
     }
 
-    function swapTokensForPLS(uint256 tokenAmount) private {
-        address[] memory path = new address[](2);
-        path[0] = address(this);
-        path[1] = titanxAddress;
+    function swapTitanXForXTGC(uint256 titanxAmount) private {
 
-        _approve(address(this), address(uniswapRouter), tokenAmount);
-        uniswapRouter.swapExactTokensForETHSupportingFeeOnTransferTokens(
-            tokenAmount,
+        address titanxTokenAddress = titanxAddress;
+        address xTGCTokenAddress = address(this);
+
+        address[] memory path = new address[](2);
+        path[0] = titanxTokenAddress;
+        path[1] = xTGCTokenAddress;
+
+        IERC20(titanxTokenAddress).approve(address(uniswapRouter), titanxAmount);
+
+        uniswapRouter.swapExactTokensForTokensSupportingFeeOnTransferTokens(
+            titanxAmount,
             0,
             path,
             address(this),
@@ -779,8 +784,8 @@ contract xTGC is Ownable, ERC20 {
             address(this),
             titanxAmount,
             tokenAmount,
-            titanxAmount,
-            tokenAmount,
+            0,
+            0,
             address(this),
             block.timestamp
         );
