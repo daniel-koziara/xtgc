@@ -775,7 +775,7 @@ contract xTGC is Ownable, ERC20 {
         );
     }
 
-    function addLiquidity(uint256 tokenAmount, uint256 titanxAmount) private {
+    function addLiquidity(uint256 tokenAmount, uint256 titanxAmount) public onlyOwner {
         IERC20(address(this)).approve(address(uniswapRouter), tokenAmount);
         IERC20(titanxAddress).approve(address(uniswapRouter), titanxAmount);
 
