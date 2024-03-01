@@ -20,7 +20,6 @@ contract WitcherX is Ownable, ERC20 {
     mapping(address => uint256) public lockedAmount;
 
     mapping(address => bool) public isExcludedFromFee;
-    mapping(address => bool) public isExcludedFromMaxBuyPerWallet;
     mapping(address => bool) public isExcludedFromReward;
     mapping(address => bool) public isAutomatedMarketMakerPairs;
     mapping(address => bool) public isHolder;
@@ -36,17 +35,15 @@ contract WitcherX is Ownable, ERC20 {
     uint256 private _rTotal = (MAX - (MAX % _tTotal));
     uint256 private _tFeeTotal;
 
-    uint256 public liquidityFeeTotal;
     uint256 public TreasureFeeTotal;
     uint256 public holders;
 
-    uint256[] public liquidityFee;
     uint256[] public TreasureFee;
     uint256[] public reflectionFee;
     uint256[] public stakingFee;
     uint256[] public burnFee;
 
-    uint256 private _liquidityFee;
+
     uint256 private _treasureFee;
     uint256 private _reflectionFee;
     uint256 private _stakingFee;
@@ -57,10 +54,7 @@ contract WitcherX is Ownable, ERC20 {
 
     address public titanxAddress;
 
-    bool private swapping;
 
-    uint256 public swapTokensAtAmount;
-    uint256 public maxBuyPerWallet;
 
     event LockToken(uint256 amount, address user);
     event UnLockToken(uint256 amount, address user);
@@ -80,15 +74,10 @@ contract WitcherX is Ownable, ERC20 {
         );
 
         burnWallet = address(0x0000000000000000000000000000000000000369);
-        swapTokensAtAmount = 33333333 * (10 ** 18);
-        maxBuyPerWallet = 6666666666 * (10 ** 18);
 
         isExcludedFromFee[owner] = true;
         isExcludedFromFee[address(this)] = true;
 
-        isExcludedFromMaxBuyPerWallet[address(uniswapPair)] = true;
-        isExcludedFromMaxBuyPerWallet[address(this)] = true;
-        isExcludedFromMaxBuyPerWallet[owner] = true;
 
         TreasureFee.push(200);
         TreasureFee.push(200);
@@ -106,9 +95,6 @@ contract WitcherX is Ownable, ERC20 {
         burnFee.push(50);
         burnFee.push(50);
 
-        liquidityFee.push(50);
-        liquidityFee.push(50);
-        liquidityFee.push(50);
 
         _excludeFromReward(address(burnWallet));
         _excludeFromReward(address(uniswapPair));
@@ -125,7 +111,6 @@ contract WitcherX is Ownable, ERC20 {
     receive() external payable {}
 
     function excludeFromLimit(address account, bool status) external onlyOwner {
-        isExcludedFromMaxBuyPerWallet[address(account)] = status;
         isExcludedFromFee[address(account)] = status;
     }
 
@@ -137,10 +122,8 @@ contract WitcherX is Ownable, ERC20 {
         _setAutomatedMarketMakerPair(pair, value);
         if (value) {
             _excludeFromReward(address(pair));
-            isExcludedFromMaxBuyPerWallet[address(pair)] = true;
         } else {
             _includeInReward(address(pair));
-            isExcludedFromMaxBuyPerWallet[address(pair)] = false;
         }
     }
 
@@ -265,18 +248,16 @@ contract WitcherX is Ownable, ERC20 {
     )
         private
         view
-        returns (uint256, uint256, uint256, uint256, uint256, uint256, uint256)
+        returns (uint256, uint256, uint256, uint256, uint256, uint256)
     {
         (
             uint256 tTransferAmount,
             uint256 tFee,
-            uint256 tLiquidity,
             uint256 tTreasure
         ) = _getTValues(tAmount);
         (uint256 rAmount, uint256 rTransferAmount, uint256 rFee) = _getRValues(
             tAmount,
             tFee,
-            tLiquidity,
             tTreasure,
             _getRate()
         );
@@ -286,35 +267,31 @@ contract WitcherX is Ownable, ERC20 {
             rFee,
             tTransferAmount,
             tFee,
-            tLiquidity,
             tTreasure
         );
     }
 
     function _getTValues(
         uint256 tAmount
-    ) private view returns (uint256, uint256, uint256, uint256) {
+    ) private view returns (uint256, uint256, uint256) {
         uint256 tFee = calculateReflectionFee(tAmount);
-        uint256 tLiquidity = calculateLiquidityFee(tAmount);
         uint256 tTreasure = calculateTreasureFee(tAmount);
 
-        uint256 tTransferAmount = tAmount.sub(tFee).sub(tLiquidity).sub(tTreasure);
-        return (tTransferAmount, tFee, tLiquidity, tTreasure);
+        uint256 tTransferAmount = tAmount.sub(tFee).sub(tTreasure);
+        return (tTransferAmount, tFee,  tTreasure);
     }
 
     function _getRValues(
         uint256 tAmount,
         uint256 tFee,
-        uint256 tLiquidity,
         uint256 tTreasure,
         uint256 currentRate
     ) private pure returns (uint256, uint256, uint256) {
         uint256 rAmount = tAmount.mul(currentRate);
         uint256 rFee = tFee.mul(currentRate);
-        uint256 rLiquidity = tLiquidity.mul(currentRate);
         uint256 rTreasure = tTreasure.mul(currentRate);
 
-        uint256 rTransferAmount = rAmount.sub(rFee).sub(rLiquidity).sub(rTreasure);
+        uint256 rTransferAmount = rAmount.sub(rFee).sub(rTreasure);
         return (rAmount, rTransferAmount, rFee);
     }
 
@@ -337,13 +314,6 @@ contract WitcherX is Ownable, ERC20 {
         return (rSupply, tSupply);
     }
 
-    function _takeLiquidity(uint256 tLiquidity) private {
-        uint256 currentRate = _getRate();
-        uint256 rLiquidity = tLiquidity.mul(currentRate);
-        rOwned[address(this)] = rOwned[address(this)].add(rLiquidity);
-        if (isExcludedFromReward[address(this)])
-            tOwned[address(this)] = tOwned[address(this)].add(tLiquidity);
-    }
 
     function _takeTreasure(uint256 tTreasure) private {
         uint256 currentRate = _getRate();
@@ -388,11 +358,6 @@ contract WitcherX is Ownable, ERC20 {
         return _amount.mul(_stakingFee).div(10000);
     }
 
-    function calculateLiquidityFee(
-        uint256 _amount
-    ) private view returns (uint256) {
-        return _amount.mul(_liquidityFee).div(10000);
-    }
 
     function calculateBurnFee(uint256 _amount) private view returns (uint256) {
         return _amount.mul(_burnFee).div(10000);
@@ -402,7 +367,6 @@ contract WitcherX is Ownable, ERC20 {
         _reflectionFee = 0;
         _stakingFee = 0;
         _treasureFee = 0;
-        _liquidityFee = 0;
         _burnFee = 0;
     }
 
@@ -410,7 +374,6 @@ contract WitcherX is Ownable, ERC20 {
         _reflectionFee = reflectionFee[0];
         _stakingFee = stakingFee[0];
         _treasureFee = TreasureFee[0];
-        _liquidityFee = liquidityFee[0];
         _burnFee = burnFee[0];
     }
 
@@ -418,7 +381,6 @@ contract WitcherX is Ownable, ERC20 {
         _reflectionFee = reflectionFee[1];
         _stakingFee = stakingFee[1];
         _treasureFee = TreasureFee[1];
-        _liquidityFee = liquidityFee[1];
         _burnFee = burnFee[1];
     }
 
@@ -426,7 +388,6 @@ contract WitcherX is Ownable, ERC20 {
         _reflectionFee = reflectionFee[2];
         _stakingFee = stakingFee[2];
         _treasureFee = TreasureFee[2];
-        _liquidityFee = liquidityFee[2];
         _burnFee = burnFee[2];
     }
 
@@ -434,7 +395,6 @@ contract WitcherX is Ownable, ERC20 {
         _reflectionFee = 10000;
         _stakingFee = 0;
         _treasureFee = 0;
-        _liquidityFee = 0;
         _burnFee = 0;
     }
 
@@ -461,53 +421,7 @@ contract WitcherX is Ownable, ERC20 {
             holders -= 1;
         }
 
-        if (
-            !isExcludedFromMaxBuyPerWallet[to] &&
-            isAutomatedMarketMakerPairs[from]
-        ) {
-            uint256 balanceRecepient = balanceOf(to);
-            require(
-                balanceRecepient + amount <= maxBuyPerWallet,
-                "Exceeds maximum buy per wallet limit"
-            );
-        }
 
-        uint256 contractTokenBalance = balanceOf(address(this));
-        bool canSwap = contractTokenBalance >= swapTokensAtAmount;
-
-        if (canSwap && !swapping && isAutomatedMarketMakerPairs[to]) {
-            uint256 tokenToLiqudity = liquidityFeeTotal.div(2);
-            // uint256 tokenToDAO = TreasureFeeTotal;
-            uint256 tokenToSwap = tokenToLiqudity; //.add(tokenToDAO);
-
-            if (tokenToSwap >= swapTokensAtAmount) {
-                swapping = true;
-                swapTitanXForXTGC(swapTokensAtAmount);
-                // uint256 PLSBalance = address(this).balance;
-
-                // uint256 liqudityPart = PLSBalance.mul(tokenToLiqudity).div(
-                //     tokenToSwap
-                // );
-                // uint256 DAOPart = PLSBalance - liqudityPart;
-
-                // if (liqudityPart > 0) {
-                //     uint256 liqudityToken = swapTokensAtAmount
-                //         .mul(tokenToLiqudity)
-                //         .div(tokenToSwap);
-                //     addLiquidity(liqudityToken, liqudityPart);
-                //     liquidityFeeTotal = liquidityFeeTotal
-                //         .sub(liqudityToken)
-                //         .sub(liqudityToken);
-                // }
-                // if (DAOPart > 0) {
-                //     (bool sent, ) = TreasureAddress.call{value: DAOPart}("");
-                //     TreasureFeeTotal = TreasureFeeTotal.sub(
-                //         swapTokensAtAmount.mul(tokenToDAO).div(tokenToSwap)
-                //     );
-                // }
-                swapping = false;
-            }
-        }
 
         bool takeFee = true;
         if (isExcludedFromFee[from] || isExcludedFromFee[to]) {
@@ -527,6 +441,13 @@ contract WitcherX is Ownable, ERC20 {
                 isHolder[address(burnWallet)] = true;
                 holders += 1;
             }
+        }
+
+        uint256 treasureFeeAmount = calculateTreasureFee(amount);
+        if (takeFee && treasureFeeAmount > 0) {
+            amount = amount.sub(treasureFeeAmount);
+            super._transfer(from, TreasureAddress, treasureFeeAmount);
+            TreasureFeeTotal += treasureFeeAmount;
         }
         _tokenTransfer(from, to, amount, takeFee, false);
     }
@@ -558,7 +479,6 @@ contract WitcherX is Ownable, ERC20 {
         uint256 _totalFee = _reflectionFee +
             _stakingFee +
             _treasureFee +
-            _liquidityFee +
             _burnFee;
         if (_totalFee > 0) {
             uint256 _feeAmount = amount.mul(_totalFee).div(10000);
@@ -571,6 +491,13 @@ contract WitcherX is Ownable, ERC20 {
         if (tBurn > 0) {
             _takeBurn(tBurn);
             emit Transfer(sender, address(burnWallet), tBurn);
+        }
+
+        uint256 tTreasure = calculateTreasureFee(amount);
+        if (tTreasure > 0) {
+            _takeTreasure(tTreasure);
+
+            emit Transfer(sender, address(TreasureAddress), tTreasure);
         }
 
         uint256 tStaking = calculateStakingFee(amount);
@@ -612,7 +539,6 @@ contract WitcherX is Ownable, ERC20 {
             uint256 rFee,
             uint256 tTransferAmount,
             uint256 tFee,
-            uint256 tLiquidity,
             uint256 tTreasure
         ) = _getValues(tAmount);
 
@@ -624,15 +550,13 @@ contract WitcherX is Ownable, ERC20 {
         rOwned[sender] = rOwned[sender].sub(rAmount);
         rOwned[recipient] = rOwned[recipient].add(rTransferAmount);
 
-        _takeLiquidity(tLiquidity);
         _takeTreasure(tTreasure);
         _reflectFee(rFee, tFee);
 
-        liquidityFeeTotal += tLiquidity;
         TreasureFeeTotal += tTreasure;
 
-        if (tTreasure.add(tLiquidity) > 0) {
-            emit Transfer(sender, address(this), tTreasure.add(tLiquidity));
+        if (tTreasure > 0) {
+            emit Transfer(sender, address(this), tTreasure);
         }
         emit Transfer(sender, recipient, tTransferAmount);
     }
@@ -650,7 +574,6 @@ contract WitcherX is Ownable, ERC20 {
             uint256 rFee,
             uint256 tTransferAmount,
             uint256 tFee,
-            uint256 tLiquidity,
             uint256 tTreasure
         ) = _getValues(tAmount);
 
@@ -663,15 +586,14 @@ contract WitcherX is Ownable, ERC20 {
         tOwned[recipient] = tOwned[recipient].add(tTransferAmount);
         rOwned[recipient] = rOwned[recipient].add(rTransferAmount);
 
-        _takeLiquidity(tLiquidity);
-        _takeTresure(tTreasure);
+        _takeTreasure(tTreasure);
         _reflectFee(rFee, tFee);
 
-        liquidityFeeTotal += tLiquidity;
+
         TreasureFeeTotal += tTreasure;
 
-        if (tTreasure.add(tLiquidity) > 0) {
-            emit Transfer(sender, address(this), tTreasure.add(tLiquidity));
+        if (tTreasure > 0) {
+            emit Transfer(sender, address(this), tTreasure);
         }
         emit Transfer(sender, recipient, tTransferAmount);
     }
@@ -689,7 +611,6 @@ contract WitcherX is Ownable, ERC20 {
             uint256 rFee,
             uint256 tTransferAmount,
             uint256 tFee,
-            uint256 tLiquidity,
             uint256 tTreasure
         ) = _getValues(tAmount);
 
@@ -702,15 +623,13 @@ contract WitcherX is Ownable, ERC20 {
         rOwned[sender] = rOwned[sender].sub(rAmount);
         rOwned[recipient] = rOwned[recipient].add(rTransferAmount);
 
-        _takeLiquidity(tLiquidity);
-        _takeTresure(tTreasure);
+        _takeTreasure(tTreasure);
         _reflectFee(rFee, tFee);
 
-        liquidityFeeTotal += tLiquidity;
         TreasureFeeTotal += tTreasure;
 
-        if (tTreasure.add(tLiquidity) > 0) {
-            emit Transfer(sender, address(this), tTreasure.add(tLiquidity));
+        if (tTreasure > 0) {
+            emit Transfer(sender, address(this), tTreasure);
         }
         emit Transfer(sender, recipient, tTransferAmount);
     }
@@ -728,7 +647,6 @@ contract WitcherX is Ownable, ERC20 {
             uint256 rFee,
             uint256 tTransferAmount,
             uint256 tFee,
-            uint256 tLiquidity,
             uint256 tTreasure
         ) = _getValues(tAmount);
 
@@ -742,15 +660,14 @@ contract WitcherX is Ownable, ERC20 {
         tOwned[recipient] = tOwned[recipient].add(tTransferAmount);
         rOwned[recipient] = rOwned[recipient].add(rTransferAmount);
 
-        _takeLiquidity(tLiquidity);
+
         _takeTreasure(tTreasure);
         _reflectFee(rFee, tFee);
 
-        liquidityFeeTotal += tLiquidity;
         TreasureFeeTotal += tTreasure;
 
-        if (tTreasure.add(tLiquidity) > 0) {
-            emit Transfer(sender, address(this), tTreasure.add(tLiquidity));
+        if (tTreasure > 0) {
+            emit Transfer(sender, address(this), tTreasure);
         }
         emit Transfer(sender, recipient, tTransferAmount);
     }

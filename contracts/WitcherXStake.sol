@@ -4,7 +4,7 @@ pragma solidity ^0.8.20;
 
 import "./SafeERC20.sol";
 
-interface IpTGC{
+interface WitcherX {
    function lockedAmount(address account) external view returns (uint256);
    function lockToken(uint256 amount, address user) external;
    function unlockToken(uint256 amount, address user) external;
@@ -14,7 +14,7 @@ interface IpTGC{
 contract WitcherXStake {
     using SafeERC20 for IERC20;
 	
-	address public immutable pTGC;
+	address public immutable witcherX;
 	
 	struct UserInfo {
 	  uint256 amount; 
@@ -63,17 +63,17 @@ contract WitcherXStake {
 	event PoolUpdated(uint256 amount);	
 	event Lock(uint256 amount, uint256 period);	
 	
-    constructor () {
+    constructor (address _witcherXAddress) {
 	   harvestFee = 100;
 	   lockFee = 3000;
 	   topStakerNumber = 100;
 	   minStakingToken = 1 * 10**18;
 	   precisionFactor = 10**18;
-	   pTGC = address(0x94534EeEe131840b1c0F61847c572228bdfDDE93);
+	   witcherX = _witcherXAddress;
     }
 	
 	function deposit(uint256 amount) external {
-		require(IERC20(pTGC).balanceOf(msg.sender) - IpTGC(pTGC).lockedAmount(msg.sender) >= amount, "balance not available for staking");
+		require(IERC20(witcherX).balanceOf(msg.sender) - WitcherX(witcherX).lockedAmount(msg.sender) >= amount, "balance not available for staking");
 		require(amount >= minStakingToken, "amount is less than minimum staking amount");
 		
 		if(mapUserInfo[msg.sender].amount > 0) 
@@ -94,7 +94,7 @@ contract WitcherXStake {
 		mapUserInfo[msg.sender].rewardDebt = (mapUserInfo[msg.sender].amount * accTokenPerShare) / (precisionFactor);
 		
 		totalStaked += amount;
-		IpTGC(pTGC).lockToken(amount, msg.sender);
+		WitcherX(witcherX).lockToken(amount, msg.sender);
 		addHighestStakedUser(mapUserInfo[msg.sender].amount, msg.sender);
         emit Deposit(msg.sender, amount);
     }
@@ -171,13 +171,13 @@ contract WitcherXStake {
 				   if(burnAmount > 0)
 				   {
 				       mapUserInfo[msg.sender].lockClaimed += pending - burnAmount;
-				       IERC20(pTGC).safeTransfer(address(0x0000000000000000000000000000000000000369), burnAmount);
-				       IERC20(pTGC).safeTransfer(address(msg.sender), pending - burnAmount);
+				       IERC20(witcherX).safeTransfer(address(0x0000000000000000000000000000000000000369), burnAmount);
+				       IERC20(witcherX).safeTransfer(address(msg.sender), pending - burnAmount);
 				   }
 				   else
 				   {
 				       mapUserInfo[msg.sender].lockClaimed += pending;
-				       IERC20(pTGC).safeTransfer(address(msg.sender), pending);
+				       IERC20(witcherX).safeTransfer(address(msg.sender), pending);
 				   }
 			   }
 			   
@@ -187,7 +187,7 @@ contract WitcherXStake {
 			   if(mapUserInfoLock[msg.sender][lockID[i]].endTime > block.timestamp) 
 			   {
 				  uint256 fee = mapUserInfoLock[msg.sender][lockID[i]].amount * lockFee / 10000;
-				  IpTGC(pTGC).unlockSend(fee, msg.sender);
+				  WitcherX(witcherX).unlockSend(fee, msg.sender);
 				  _updatePoolLock(fee);
 				  
 				  uint256 pendingR = pendingReward(msg.sender);
@@ -217,7 +217,7 @@ contract WitcherXStake {
 			        pending += mapUserInfo[msg.sender].pendingToClaimed; 
 			if (pending > 0) 
 			{
-                IERC20(pTGC).safeTransfer(address(msg.sender), pending);
+                IERC20(witcherX).safeTransfer(address(msg.sender), pending);
 				
 			    mapUserInfo[msg.sender].rewardDebt = (mapUserInfo[msg.sender].amount * accTokenPerShare) / (precisionFactor);
 				mapUserInfo[msg.sender].claimed += pending;
@@ -283,13 +283,13 @@ contract WitcherXStake {
 				   if(burnAmount > 0)
 				   {
 				       mapUserInfo[msg.sender].lockClaimed += pending - burnAmount;
-				       IERC20(pTGC).safeTransfer(address(0x0000000000000000000000000000000000000369), burnAmount);
-				       IERC20(pTGC).safeTransfer(address(msg.sender), pending - burnAmount);
+				       IERC20(witcherX).safeTransfer(address(0x0000000000000000000000000000000000000369), burnAmount);
+				       IERC20(witcherX).safeTransfer(address(msg.sender), pending - burnAmount);
 				   }
 				   else
 				   {
 				       mapUserInfo[msg.sender].lockClaimed += pending;
-				       IERC20(pTGC).safeTransfer(address(msg.sender), pending);
+				       IERC20(witcherX).safeTransfer(address(msg.sender), pending);
 				   }
 				   emit Withdraw(msg.sender, pending);
 			   }
@@ -306,7 +306,7 @@ contract WitcherXStake {
 					pending += mapUserInfo[msg.sender].pendingToClaimed; 
 			if(pending > 0)
 			{
-			   IERC20(pTGC).safeTransfer(address(msg.sender), pending);
+			   IERC20(witcherX).safeTransfer(address(msg.sender), pending);
 			}
 			totalStaked -= amount;
 			
@@ -319,8 +319,8 @@ contract WitcherXStake {
 			mapUserInfo[msg.sender].pendingToClaimed = 0;
 			
 			uint256 fee = amount * harvestFee / 10000;
-		    IpTGC(pTGC).unlockSend(fee, msg.sender);
-			IpTGC(pTGC).unlockToken(amount - fee, msg.sender);
+		    WitcherX(witcherX).unlockSend(fee, msg.sender);
+			WitcherX(witcherX).unlockToken(amount - fee, msg.sender);
 			_updatePool(fee);
 			
 			addHighestStakedUser(mapUserInfo[msg.sender].amount, msg.sender);
@@ -332,13 +332,13 @@ contract WitcherXStake {
 					pending += mapUserInfo[msg.sender].pendingToClaimed; 
 			if(pending > 0)
 			{
-			   IERC20(pTGC).safeTransfer(address(msg.sender), pending);
+			   IERC20(witcherX).safeTransfer(address(msg.sender), pending);
 			}
 			totalStaked -= amount;
 			
 			uint256 fee = amount * harvestFee / 10000;
-		    IpTGC(pTGC).unlockSend(fee, msg.sender);
-			IpTGC(pTGC).unlockToken(amount - fee, msg.sender);
+		    WitcherX(witcherX).unlockSend(fee, msg.sender);
+			WitcherX(witcherX).unlockToken(amount - fee, msg.sender);
 			_updatePool(fee);
 			totalStaker--;
 			
@@ -372,7 +372,7 @@ contract WitcherXStake {
     }
 	
 	function updatePool(uint256 amount) external {
-	   require(msg.sender == address(pTGC), "sender not allowed");
+	   require(msg.sender == address(witcherX), "sender not allowed");
 	   _updatePool(amount);
     }
 	
