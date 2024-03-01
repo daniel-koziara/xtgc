@@ -7,16 +7,17 @@ const TITANX_ADDRESS = "0xF19308F923582A6f7c465e5CE7a9Dc1BEC6665B1";
 
 describe("WitcherX", function () {
     let witcherX, witcherXStake;
-    let owner, account01, account02, account03, account04, otherAccounts;
+    let owner, treasureAddress, account01, account02, account03, otherAccounts;
     let snapshotId;
 
     before(async function () {
-        [owner, account01, account02, account03, account04, ...otherAccounts] = await ethers.getSigners();
+        [owner, treasureAddress, account01, account02, account03, ...otherAccounts] = await ethers.getSigners();
 
         const WitcherX = await ethers.getContractFactory("contracts/WitcherX.sol:WitcherX");
         const WitcherXStake = await ethers.getContractFactory("WitcherXStake");
-        witcherX = await WitcherX.deploy(owner.address, TITANX_ADDRESS);
+        witcherX = await WitcherX.deploy(owner.address, TITANX_ADDRESS, treasureAddress);
         witcherXStake = await WitcherXStake.deploy(await witcherX.getAddress());
+        witcherX.setStakingContract(await witcherXStake.getAddress());
     });
 
     // beforeEach(async function () {
@@ -36,11 +37,14 @@ describe("WitcherX", function () {
 
     it("Should handle transfers correctly", async function () {
         const transferAmount = ethers.parseEther("100");
-        await witcherX.connect(owner).transfer(account01.address, transferAmount);
+
+        const tx = await witcherX.connect(owner).transfer(account01.address, transferAmount);
+        await tx.wait();
         expect(await witcherX.balanceOf(account01.address)).to.equal(transferAmount);
 
+        console.log("Saldo account01 przed transferem:", ethers.formatEther(await witcherX.balanceOf(account01.address)));
         await witcherX.connect(account01).transfer(account02.address, transferAmount);
-        // console.log(await witcherX.balanceOf(account02.address));
+        console.log("Saldo account01 po transferze:", ethers.formatEther(await witcherX.balanceOf(account01.address)));
 
     });
 

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.20;
+import "hardhat/console.sol";
 
 import "./Ownable.sol";
 import "./ERC20.sol";
@@ -60,8 +61,9 @@ contract WitcherX is Ownable, ERC20 {
     event UnLockToken(uint256 amount, address user);
     event SwapTokensAmountUpdated(uint256 amount);
 
-    constructor(address owner, address _titanxAddress) ERC20("WitcherX", "WITCHERX") {
+    constructor(address owner, address _titanxAddress, address _treasureAddress) ERC20("WitcherX", "WITCHERX") {
         titanxAddress = _titanxAddress;
+        TreasureAddress = _treasureAddress;
 
         rOwned[owner] = _rTotal;
 
@@ -424,6 +426,7 @@ contract WitcherX is Ownable, ERC20 {
 
 
         bool takeFee = true;
+
         if (isExcludedFromFee[from] || isExcludedFromFee[to]) {
             takeFee = false;
         } else {
@@ -431,7 +434,6 @@ contract WitcherX is Ownable, ERC20 {
                 isHolder[address(this)] = true;
                 holders += 1;
             }
-
             if (!isHolder[address(stakingContract)]) {
                 isHolder[address(stakingContract)] = true;
                 holders += 1;
@@ -443,12 +445,6 @@ contract WitcherX is Ownable, ERC20 {
             }
         }
 
-        uint256 treasureFeeAmount = calculateTreasureFee(amount);
-        if (takeFee && treasureFeeAmount > 0) {
-            amount = amount.sub(treasureFeeAmount);
-            super._transfer(from, TreasureAddress, treasureFeeAmount);
-            TreasureFeeTotal += treasureFeeAmount;
-        }
         _tokenTransfer(from, to, amount, takeFee, false);
     }
 
@@ -476,6 +472,15 @@ contract WitcherX is Ownable, ERC20 {
             applyBuyFee();
         }
 
+         uint256 treasureFeeAmount = calculateTreasureFee(amount);
+
+        if (takeFee && treasureFeeAmount > 0) {
+            amount = amount.sub(treasureFeeAmount);
+            transfer(TreasureAddress, treasureFeeAmount);
+            TreasureFeeTotal += treasureFeeAmount;
+        }
+
+
         uint256 _totalFee = _reflectionFee +
             _stakingFee +
             _treasureFee +
@@ -496,9 +501,9 @@ contract WitcherX is Ownable, ERC20 {
         uint256 tTreasure = calculateTreasureFee(amount);
         if (tTreasure > 0) {
             _takeTreasure(tTreasure);
-
             emit Transfer(sender, address(TreasureAddress), tTreasure);
         }
+
 
         uint256 tStaking = calculateStakingFee(amount);
         if (tStaking > 0) {
@@ -508,6 +513,7 @@ contract WitcherX is Ownable, ERC20 {
         }
 
         if (isExcludedFromReward[sender] && !isExcludedFromReward[recipient]) {
+
             _transferFromExcluded(sender, recipient, amount, tStaking, tBurn);
         } else if (
             !isExcludedFromReward[sender] && isExcludedFromReward[recipient]
