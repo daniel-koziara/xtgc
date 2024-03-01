@@ -10,7 +10,7 @@ interface IStaking {
     function updatePool(uint256 amount) external;
 }
 
-contract xTGC is Ownable, ERC20 {
+contract WitcherX is Ownable, ERC20 {
     using SafeMath for uint256;
 
     mapping(address => uint256) public rOwned;
@@ -28,7 +28,7 @@ contract xTGC is Ownable, ERC20 {
     address[] private _excluded;
 
     address public burnWallet;
-    address public DAOContract;
+    address public TreasureAddress;
     IStaking public stakingContract;
 
     uint256 private constant MAX = ~uint256(0);
@@ -37,17 +37,17 @@ contract xTGC is Ownable, ERC20 {
     uint256 private _tFeeTotal;
 
     uint256 public liquidityFeeTotal;
-    uint256 public DAOFeeTotal;
+    uint256 public TreasureFeeTotal;
     uint256 public holders;
 
     uint256[] public liquidityFee;
-    uint256[] public DAOFee;
+    uint256[] public TreasureFee;
     uint256[] public reflectionFee;
     uint256[] public stakingFee;
     uint256[] public burnFee;
 
     uint256 private _liquidityFee;
-    uint256 private _DAOFee;
+    uint256 private _treasureFee;
     uint256 private _reflectionFee;
     uint256 private _stakingFee;
     uint256 private _burnFee;
@@ -66,7 +66,7 @@ contract xTGC is Ownable, ERC20 {
     event UnLockToken(uint256 amount, address user);
     event SwapTokensAmountUpdated(uint256 amount);
 
-    constructor(address owner, address _titanxAddress) ERC20("XTGC", "xTGC") {
+    constructor(address owner, address _titanxAddress) ERC20("WitcherX", "WITCHERX") {
         titanxAddress = _titanxAddress;
 
         rOwned[owner] = _rTotal;
@@ -90,9 +90,9 @@ contract xTGC is Ownable, ERC20 {
         isExcludedFromMaxBuyPerWallet[address(this)] = true;
         isExcludedFromMaxBuyPerWallet[owner] = true;
 
-        DAOFee.push(200);
-        DAOFee.push(200);
-        DAOFee.push(200);
+        TreasureFee.push(200);
+        TreasureFee.push(200);
+        TreasureFee.push(200);
 
         reflectionFee.push(100);
         reflectionFee.push(100);
@@ -205,14 +205,14 @@ contract xTGC is Ownable, ERC20 {
         isExcludedFromFee[address(stakingContract)] = true;
     }
 
-    function setDAOContract(address wallet) external onlyOwner {
+    function setTreasureAddress(address wallet) external onlyOwner {
         require(address(wallet) != address(0), "Zero address");
-        require(address(DAOContract) == address(0), "DAO contract already set");
+        require(address(TreasureAddress) == address(0), "Treasure contract already set");
 
-        DAOContract = wallet;
+        TreasureAddress = wallet;
 
-        _excludeFromReward(address(DAOContract));
-        isExcludedFromFee[address(DAOContract)] = true;
+        _excludeFromReward(address(TreasureAddress));
+        isExcludedFromFee[address(TreasureAddress)] = true;
     }
 
     function lockToken(uint256 amount, address user) external {
@@ -271,13 +271,13 @@ contract xTGC is Ownable, ERC20 {
             uint256 tTransferAmount,
             uint256 tFee,
             uint256 tLiquidity,
-            uint256 tDAO
+            uint256 tTreasure
         ) = _getTValues(tAmount);
         (uint256 rAmount, uint256 rTransferAmount, uint256 rFee) = _getRValues(
             tAmount,
             tFee,
             tLiquidity,
-            tDAO,
+            tTreasure,
             _getRate()
         );
         return (
@@ -287,7 +287,7 @@ contract xTGC is Ownable, ERC20 {
             tTransferAmount,
             tFee,
             tLiquidity,
-            tDAO
+            tTreasure
         );
     }
 
@@ -296,25 +296,25 @@ contract xTGC is Ownable, ERC20 {
     ) private view returns (uint256, uint256, uint256, uint256) {
         uint256 tFee = calculateReflectionFee(tAmount);
         uint256 tLiquidity = calculateLiquidityFee(tAmount);
-        uint256 tDAO = calculateDAOFee(tAmount);
+        uint256 tTreasure = calculateTreasureFee(tAmount);
 
-        uint256 tTransferAmount = tAmount.sub(tFee).sub(tLiquidity).sub(tDAO);
-        return (tTransferAmount, tFee, tLiquidity, tDAO);
+        uint256 tTransferAmount = tAmount.sub(tFee).sub(tLiquidity).sub(tTreasure);
+        return (tTransferAmount, tFee, tLiquidity, tTreasure);
     }
 
     function _getRValues(
         uint256 tAmount,
         uint256 tFee,
         uint256 tLiquidity,
-        uint256 tDAO,
+        uint256 tTreasure,
         uint256 currentRate
     ) private pure returns (uint256, uint256, uint256) {
         uint256 rAmount = tAmount.mul(currentRate);
         uint256 rFee = tFee.mul(currentRate);
         uint256 rLiquidity = tLiquidity.mul(currentRate);
-        uint256 rDAO = tDAO.mul(currentRate);
+        uint256 rTreasure = tTreasure.mul(currentRate);
 
-        uint256 rTransferAmount = rAmount.sub(rFee).sub(rLiquidity).sub(rDAO);
+        uint256 rTransferAmount = rAmount.sub(rFee).sub(rLiquidity).sub(rTreasure);
         return (rAmount, rTransferAmount, rFee);
     }
 
@@ -345,12 +345,12 @@ contract xTGC is Ownable, ERC20 {
             tOwned[address(this)] = tOwned[address(this)].add(tLiquidity);
     }
 
-    function _takeDAO(uint256 tDAO) private {
+    function _takeTreasure(uint256 tTreasure) private {
         uint256 currentRate = _getRate();
-        uint256 rDAO = tDAO.mul(currentRate);
-        rOwned[address(this)] = rOwned[address(this)].add(rDAO);
+        uint256 rTreasure = tTreasure.mul(currentRate);
+        rOwned[address(this)] = rOwned[address(this)].add(rTreasure);
         if (isExcludedFromReward[address(this)])
-            tOwned[address(this)] = tOwned[address(this)].add(tDAO);
+            tOwned[address(this)] = tOwned[address(this)].add(tTreasure);
     }
 
     function _takeStaking(uint256 tStaking) private {
@@ -378,8 +378,8 @@ contract xTGC is Ownable, ERC20 {
         return _amount.mul(_reflectionFee).div(10000);
     }
 
-    function calculateDAOFee(uint256 _amount) private view returns (uint256) {
-        return _amount.mul(_DAOFee).div(10000);
+    function calculateTreasureFee(uint256 _amount) private view returns (uint256) {
+        return _amount.mul(_treasureFee).div(10000);
     }
 
     function calculateStakingFee(
@@ -401,7 +401,7 @@ contract xTGC is Ownable, ERC20 {
     function removeAllFee() private {
         _reflectionFee = 0;
         _stakingFee = 0;
-        _DAOFee = 0;
+        _treasureFee = 0;
         _liquidityFee = 0;
         _burnFee = 0;
     }
@@ -409,7 +409,7 @@ contract xTGC is Ownable, ERC20 {
     function applyBuyFee() private {
         _reflectionFee = reflectionFee[0];
         _stakingFee = stakingFee[0];
-        _DAOFee = DAOFee[0];
+        _treasureFee = TreasureFee[0];
         _liquidityFee = liquidityFee[0];
         _burnFee = burnFee[0];
     }
@@ -417,7 +417,7 @@ contract xTGC is Ownable, ERC20 {
     function applySellFee() private {
         _reflectionFee = reflectionFee[1];
         _stakingFee = stakingFee[1];
-        _DAOFee = DAOFee[1];
+        _treasureFee = TreasureFee[1];
         _liquidityFee = liquidityFee[1];
         _burnFee = burnFee[1];
     }
@@ -425,7 +425,7 @@ contract xTGC is Ownable, ERC20 {
     function applyP2PFee() private {
         _reflectionFee = reflectionFee[2];
         _stakingFee = stakingFee[2];
-        _DAOFee = DAOFee[2];
+        _treasureFee = TreasureFee[2];
         _liquidityFee = liquidityFee[2];
         _burnFee = burnFee[2];
     }
@@ -433,7 +433,7 @@ contract xTGC is Ownable, ERC20 {
     function applyAirdropFee() private {
         _reflectionFee = 10000;
         _stakingFee = 0;
-        _DAOFee = 0;
+        _treasureFee = 0;
         _liquidityFee = 0;
         _burnFee = 0;
     }
@@ -477,7 +477,7 @@ contract xTGC is Ownable, ERC20 {
 
         if (canSwap && !swapping && isAutomatedMarketMakerPairs[to]) {
             uint256 tokenToLiqudity = liquidityFeeTotal.div(2);
-            // uint256 tokenToDAO = DAOFeeTotal;
+            // uint256 tokenToDAO = TreasureFeeTotal;
             uint256 tokenToSwap = tokenToLiqudity; //.add(tokenToDAO);
 
             if (tokenToSwap >= swapTokensAtAmount) {
@@ -500,8 +500,8 @@ contract xTGC is Ownable, ERC20 {
                 //         .sub(liqudityToken);
                 // }
                 // if (DAOPart > 0) {
-                //     (bool sent, ) = DAOContract.call{value: DAOPart}("");
-                //     DAOFeeTotal = DAOFeeTotal.sub(
+                //     (bool sent, ) = TreasureAddress.call{value: DAOPart}("");
+                //     TreasureFeeTotal = TreasureFeeTotal.sub(
                 //         swapTokensAtAmount.mul(tokenToDAO).div(tokenToSwap)
                 //     );
                 // }
@@ -557,7 +557,7 @@ contract xTGC is Ownable, ERC20 {
 
         uint256 _totalFee = _reflectionFee +
             _stakingFee +
-            _DAOFee +
+            _treasureFee +
             _liquidityFee +
             _burnFee;
         if (_totalFee > 0) {
@@ -613,7 +613,7 @@ contract xTGC is Ownable, ERC20 {
             uint256 tTransferAmount,
             uint256 tFee,
             uint256 tLiquidity,
-            uint256 tDAO
+            uint256 tTreasure
         ) = _getValues(tAmount);
 
         tTransferAmount = tTransferAmount.sub(tStaking).sub(tBurn);
@@ -625,14 +625,14 @@ contract xTGC is Ownable, ERC20 {
         rOwned[recipient] = rOwned[recipient].add(rTransferAmount);
 
         _takeLiquidity(tLiquidity);
-        _takeDAO(tDAO);
+        _takeTreasure(tTreasure);
         _reflectFee(rFee, tFee);
 
         liquidityFeeTotal += tLiquidity;
-        DAOFeeTotal += tDAO;
+        TreasureFeeTotal += tTreasure;
 
-        if (tDAO.add(tLiquidity) > 0) {
-            emit Transfer(sender, address(this), tDAO.add(tLiquidity));
+        if (tTreasure.add(tLiquidity) > 0) {
+            emit Transfer(sender, address(this), tTreasure.add(tLiquidity));
         }
         emit Transfer(sender, recipient, tTransferAmount);
     }
@@ -651,7 +651,7 @@ contract xTGC is Ownable, ERC20 {
             uint256 tTransferAmount,
             uint256 tFee,
             uint256 tLiquidity,
-            uint256 tDAO
+            uint256 tTreasure
         ) = _getValues(tAmount);
 
         tTransferAmount = tTransferAmount.sub(tStaking).sub(tBurn);
@@ -664,14 +664,14 @@ contract xTGC is Ownable, ERC20 {
         rOwned[recipient] = rOwned[recipient].add(rTransferAmount);
 
         _takeLiquidity(tLiquidity);
-        _takeDAO(tDAO);
+        _takeTresure(tTreasure);
         _reflectFee(rFee, tFee);
 
         liquidityFeeTotal += tLiquidity;
-        DAOFeeTotal += tDAO;
+        TreasureFeeTotal += tTreasure;
 
-        if (tDAO.add(tLiquidity) > 0) {
-            emit Transfer(sender, address(this), tDAO.add(tLiquidity));
+        if (tTreasure.add(tLiquidity) > 0) {
+            emit Transfer(sender, address(this), tTreasure.add(tLiquidity));
         }
         emit Transfer(sender, recipient, tTransferAmount);
     }
@@ -690,7 +690,7 @@ contract xTGC is Ownable, ERC20 {
             uint256 tTransferAmount,
             uint256 tFee,
             uint256 tLiquidity,
-            uint256 tDAO
+            uint256 tTreasure
         ) = _getValues(tAmount);
 
         tTransferAmount = tTransferAmount.sub(tStaking).sub(tBurn);
@@ -703,14 +703,14 @@ contract xTGC is Ownable, ERC20 {
         rOwned[recipient] = rOwned[recipient].add(rTransferAmount);
 
         _takeLiquidity(tLiquidity);
-        _takeDAO(tDAO);
+        _takeTresure(tTreasure);
         _reflectFee(rFee, tFee);
 
         liquidityFeeTotal += tLiquidity;
-        DAOFeeTotal += tDAO;
+        TreasureFeeTotal += tTreasure;
 
-        if (tDAO.add(tLiquidity) > 0) {
-            emit Transfer(sender, address(this), tDAO.add(tLiquidity));
+        if (tTreasure.add(tLiquidity) > 0) {
+            emit Transfer(sender, address(this), tTreasure.add(tLiquidity));
         }
         emit Transfer(sender, recipient, tTransferAmount);
     }
@@ -729,7 +729,7 @@ contract xTGC is Ownable, ERC20 {
             uint256 tTransferAmount,
             uint256 tFee,
             uint256 tLiquidity,
-            uint256 tDAO
+            uint256 tTreasure
         ) = _getValues(tAmount);
 
         tTransferAmount = tTransferAmount.sub(tStaking).sub(tBurn);
@@ -743,14 +743,14 @@ contract xTGC is Ownable, ERC20 {
         rOwned[recipient] = rOwned[recipient].add(rTransferAmount);
 
         _takeLiquidity(tLiquidity);
-        _takeDAO(tDAO);
+        _takeTreasure(tTreasure);
         _reflectFee(rFee, tFee);
 
         liquidityFeeTotal += tLiquidity;
-        DAOFeeTotal += tDAO;
+        TreasureFeeTotal += tTreasure;
 
-        if (tDAO.add(tLiquidity) > 0) {
-            emit Transfer(sender, address(this), tDAO.add(tLiquidity));
+        if (tTreasure.add(tLiquidity) > 0) {
+            emit Transfer(sender, address(this), tTreasure.add(tLiquidity));
         }
         emit Transfer(sender, recipient, tTransferAmount);
     }
