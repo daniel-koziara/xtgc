@@ -81,21 +81,21 @@ contract WitcherX is Ownable, ERC20 {
         isExcludedFromFee[address(this)] = true;
 
 
-        TreasureFee.push(200);
-        TreasureFee.push(200);
-        TreasureFee.push(200);
+        TreasureFee.push(50);
+        TreasureFee.push(50);
+        TreasureFee.push(50);
 
-        reflectionFee.push(100);
-        reflectionFee.push(100);
-        reflectionFee.push(100);
+        reflectionFee.push(125);
+        reflectionFee.push(125);
+        reflectionFee.push(125);
 
-        stakingFee.push(100);
-        stakingFee.push(100);
-        stakingFee.push(100);
+        stakingFee.push(125);
+        stakingFee.push(125);
+        stakingFee.push(125);
 
-        burnFee.push(50);
-        burnFee.push(50);
-        burnFee.push(50);
+        burnFee.push(150);
+        burnFee.push(150);
+        burnFee.push(150);
 
 
         _excludeFromReward(address(burnWallet));
@@ -423,8 +423,6 @@ contract WitcherX is Ownable, ERC20 {
             holders -= 1;
         }
 
-
-
         bool takeFee = true;
 
         if (isExcludedFromFee[from] || isExcludedFromFee[to]) {
@@ -473,11 +471,12 @@ contract WitcherX is Ownable, ERC20 {
         }
 
          uint256 treasureFeeAmount = calculateTreasureFee(amount);
-
         if (takeFee && treasureFeeAmount > 0) {
             amount = amount.sub(treasureFeeAmount);
             transfer(TreasureAddress, treasureFeeAmount);
             TreasureFeeTotal += treasureFeeAmount;
+            _takeTreasure(treasureFeeAmount);
+            emit Transfer(sender, address(TreasureAddress), treasureFeeAmount);
         }
 
 
@@ -498,12 +497,6 @@ contract WitcherX is Ownable, ERC20 {
             emit Transfer(sender, address(burnWallet), tBurn);
         }
 
-        uint256 tTreasure = calculateTreasureFee(amount);
-        if (tTreasure > 0) {
-            _takeTreasure(tTreasure);
-            emit Transfer(sender, address(TreasureAddress), tTreasure);
-        }
-
 
         uint256 tStaking = calculateStakingFee(amount);
         if (tStaking > 0) {
@@ -513,7 +506,6 @@ contract WitcherX is Ownable, ERC20 {
         }
 
         if (isExcludedFromReward[sender] && !isExcludedFromReward[recipient]) {
-
             _transferFromExcluded(sender, recipient, amount, tStaking, tBurn);
         } else if (
             !isExcludedFromReward[sender] && isExcludedFromReward[recipient]
