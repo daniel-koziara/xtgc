@@ -670,35 +670,21 @@ contract WitcherX is Ownable, ERC20 {
         emit Transfer(sender, recipient, tTransferAmount);
     }
 
-    function swapTitanXForXTGC(uint256 titanxAmount) private {
-
-        address titanxTokenAddress = titanxAddress;
-        address xTGCTokenAddress = address(this);
-
-        address[] memory path = new address[](2);
-        path[0] = titanxTokenAddress;
-        path[1] = xTGCTokenAddress;
-
-        IERC20(titanxTokenAddress).approve(address(uniswapRouter), titanxAmount);
-
-        uniswapRouter.swapExactTokensForTokensSupportingFeeOnTransferTokens(
-            titanxAmount,
-            0,
-            path,
-            address(this),
-            block.timestamp
-        );
-    }
-
-    function addLiquidity(uint256 tokenAmount, uint256 titanxAmount) external onlyOwner {
-        IERC20(address(this)).approve(address(uniswapRouter), tokenAmount);
+    function addLiquidity(uint256 witcherxAmount, uint256 titanxAmount) external onlyOwner {
+        IERC20(address(this)).approve(address(uniswapRouter), witcherxAmount);
         IERC20(titanxAddress).approve(address(uniswapRouter), titanxAmount);
 
+
+        (address token0, uint256 amount0, address token1, uint256 amount1) = 
+        address(this) < titanxAddress ? 
+        (address(this), witcherxAmount, titanxAddress, titanxAmount) : 
+        (titanxAddress, titanxAmount, address(this), witcherxAmount);
+
         uniswapRouter.addLiquidity(
-            titanxAddress,
-            address(this),
-            tokenAmount,
-            titanxAmount,
+            token0,
+            token1,
+            amount0,
+            amount1,
             0,
             0,
             address(this),
