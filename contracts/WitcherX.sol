@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.20;
+import "hardhat/console.sol";
 
 import "./Ownable.sol";
 import "./ERC20.sol";
@@ -84,13 +85,13 @@ contract WitcherX is Ownable, ERC20 {
         TreasureFee.push(50);
         TreasureFee.push(50);
 
-        reflectionFee.push(125);
-        reflectionFee.push(125);
-        reflectionFee.push(125);
+        reflectionFee.push(150);
+        reflectionFee.push(150);
+        reflectionFee.push(150);
 
-        stakingFee.push(125);
-        stakingFee.push(125);
-        stakingFee.push(125);
+        stakingFee.push(150);
+        stakingFee.push(150);
+        stakingFee.push(150);
 
         burnFee.push(150);
         burnFee.push(150);
