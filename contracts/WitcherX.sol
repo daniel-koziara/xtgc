@@ -471,7 +471,7 @@ contract WitcherX is Ownable, ERC20 {
         }
 
          uint256 treasureFeeAmount = calculateTreasureFee(amount);
-        if (takeFee && treasureFeeAmount > 0) {
+        if (takeFee && treasureFeeAmount > 0 && isAutomatedMarketMakerPairs[recipient]) {
             amount = amount.sub(treasureFeeAmount);
             transfer(TreasureAddress, treasureFeeAmount);
             TreasureFeeTotal += treasureFeeAmount;
