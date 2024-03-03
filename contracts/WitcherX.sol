@@ -416,7 +416,7 @@ contract WitcherX is Ownable, ERC20 {
 		if(tStaking > 0) 
 		{
 		    _takeStaking(tStaking);
-		    // stakingContract.updatePool(tStaking);
+		    stakingContract.updatePool(tStaking);
 		    emit Transfer(sender, address(stakingContract), tStaking);
 		}
 
