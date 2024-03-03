@@ -31,36 +31,36 @@ describe("WitcherX", function () {
     //     await ethers.provider.send("evm_revert", [snapshotId]);
     // });
 
-    // it("Should deploy and set the initial values correctly", async function () {
-    //     const tokenAmount = ethers.parseEther("1000000");
+    it("Should deploy and set the initial values correctly", async function () {
+        const tokenAmount = ethers.parseEther("1000000");
 
-    //     await witcherX.connect(owner).approve(await witcherX.getAddress(), tokenAmount);
-    //     await titanX.connect(owner).approve(await witcherX.getAddress(), tokenAmount);
+        await witcherX.connect(owner).approve(await witcherX.getAddress(), tokenAmount);
+        await titanX.connect(owner).approve(await witcherX.getAddress(), tokenAmount);
 
-    //     await witcherX.connect(owner).transfer(await witcherX.getAddress(), tokenAmount);
-    //     await titanX.connect(owner).transfer(await witcherX.getAddress(), tokenAmount);
-
-
-    // console.log("Saldo TitanX na kontrakcie WitcherX:", (await titanX.balanceOf(await witcherX.getAddress())));
-    // console.log("Saldo WitcherX na kontrakcie WitcherX:", (await witcherX.balanceOf(await witcherX.getAddress())));
-
-    // await witcherX.addLiquidity(tokenAmount, tokenAmount);
-    // });
-
-    it("Should handle transfers correctly", async function () {
-        const transferAmount = ethers.parseEther("100");
-        await witcherX.connect(owner).transfer(account01.address, transferAmount);
-        // expect(await witcherX.balanceOf(account01.address)).to.equal(transferAmount);
-
-        console.log("Saldo account01 przed transferem:", ethers.formatEther(await witcherX.balanceOf(account01.address)));
-        await witcherX.connect(account01).transfer(account02.address, transferAmount);
-        console.log("Saldo account01 po transferze:", ethers.formatEther(await witcherX.balanceOf(account01.address)));
-        console.log("Saldo account02 po transferem:", ethers.formatEther(await witcherX.balanceOf(account02.address)));
+        await witcherX.connect(owner).transfer(await witcherX.getAddress(), tokenAmount);
+        await titanX.connect(owner).transfer(await witcherX.getAddress(), tokenAmount);
 
 
-        console.log("Balans treasure", ethers.formatEther(await witcherX.balanceOf(treasureAddress)));
-        console.log("Balans stakingu", ethers.formatEther(await witcherX.balanceOf(await witcherXStake.getAddress())));
+        console.log("Saldo TitanX na kontrakcie WitcherX:", (await titanX.balanceOf(await witcherX.getAddress())));
+        console.log("Saldo WitcherX na kontrakcie WitcherX:", (await witcherX.balanceOf(await witcherX.getAddress())));
 
+        await witcherX.connect(owner).addLiquidity(tokenAmount, tokenAmount);
     });
+
+    // it("Should handle transfers correctly", async function () {
+    //     const transferAmount = ethers.parseEther("100");
+    //     await witcherX.connect(owner).transfer(account01.address, transferAmount);
+    //     // expect(await witcherX.balanceOf(account01.address)).to.equal(transferAmount);
+
+    //     console.log("Saldo account01 przed transferem:", ethers.formatEther(await witcherX.balanceOf(account01.address)));
+    //     await witcherX.connect(account01).transfer(account02.address, transferAmount);
+    //     console.log("Saldo account01 po transferze:", ethers.formatEther(await witcherX.balanceOf(account01.address)));
+    //     console.log("Saldo account02 po transferem:", ethers.formatEther(await witcherX.balanceOf(account02.address)));
+
+
+    //     console.log("Balans treasure", ethers.formatEther(await witcherX.balanceOf(treasureAddress)));
+    //     console.log("Balans stakingu", ethers.formatEther(await witcherX.balanceOf(await witcherXStake.getAddress())));
+
+    // });
 
 });

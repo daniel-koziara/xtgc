@@ -38,18 +38,15 @@ contract WitcherX is Ownable, ERC20 {
 	
 	uint256[] public reflectionFee;
 	uint256[] public stakingFee;
-	uint256[] public treasureFee;
 	uint256[] public burnFee;
 	
 	uint256 private _reflectionFee;
 	uint256 private _stakingFee;
-	uint256 private _treasureFee;
 	uint256 private _burnFee;
 	
 	IUniswapRouter public uniswapRouter;
     address public uniswapPair;
 	address public titanxAddress;
-    address public treasureAddress;
 
 	bool private swapping;
 	
@@ -58,12 +55,10 @@ contract WitcherX is Ownable, ERC20 {
 	event UnLockToken(uint256 amount, address user);
 	event SwapTokensAmountUpdated(uint256 amount);
 	
-    constructor (address owner, address _titanxAddress, address _treasureAddress) ERC20("WitcherX", "WITCHERX") {
+    constructor (address owner, address _titanxAddress) ERC20("WitcherX", "WITCHERX") {
 		rOwned[owner] = _rTotal;
-		_mint(address(this), 10000e18);
 
         titanxAddress = _titanxAddress;
-        treasureAddress = _treasureAddress;
 		
 		uniswapRouter = IUniswapRouter(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
 		uniswapPair = IUniswapFactory(uniswapRouter.factory()).createPair(address(this), titanxAddress);
@@ -71,9 +66,9 @@ contract WitcherX is Ownable, ERC20 {
 		burnWallet = address(0x0000000000000000000000000000000000000369);
 
 		
-		// isExcludedFromFee[owner] = true;
+		isExcludedFromFee[owner] = true;
 		isExcludedFromFee[address(this)] = true;
-		isExcludedFromFee[treasureAddress] = true;
+
 		
 		
 		reflectionFee.push(150);
@@ -84,9 +79,6 @@ contract WitcherX is Ownable, ERC20 {
 		stakingFee.push(150);
 		stakingFee.push(150);
 
-		treasureFee.push(50);
-		treasureFee.push(50);
-		treasureFee.push(50);
 		
 		burnFee.push(150);
 		burnFee.push(150);
@@ -260,13 +252,7 @@ contract WitcherX is Ownable, ERC20 {
             tOwned[address(stakingContract)] = tOwned[address(stakingContract)].add(tStaking);
     }
 
-	function _takeTreasure(uint256 tTreasure) private {
-        uint256 currentRate =  _getRate();
-        uint256 rTreasure = tTreasure.mul(currentRate);
-        rOwned[address(treasureAddress)] = rOwned[address(treasureAddress)].add(rTreasure);
-        if(isExcludedFromReward[address(treasureAddress)])
-            tOwned[address(treasureAddress)] = tOwned[address(treasureAddress)].add(tTreasure);
-    }
+
 	
 	function _takeBurn(uint256 tBurn) private {
         uint256 currentRate =  _getRate();
@@ -285,10 +271,6 @@ contract WitcherX is Ownable, ERC20 {
         return _amount.mul(_stakingFee).div(10000);
     }
 
-	function calculateTreasureFee(uint256 _amount) private view returns (uint256) {
-        return _amount.mul(_treasureFee).div(10000);
-    }
-	
 	
 	function calculateBurnFee(uint256 _amount) private view returns (uint256) {
 		return _amount.mul(_burnFee).div(10000);
@@ -297,35 +279,31 @@ contract WitcherX is Ownable, ERC20 {
     function removeAllFee() private {
 	   _reflectionFee = 0;
 	   _stakingFee = 0;
-	   _treasureFee = 0;
+
 	   _burnFee = 0;
     }
 	
     function applyBuyFee() private {
 	   _reflectionFee = reflectionFee[0];
 	   _stakingFee = stakingFee[0];
-	   _treasureFee = treasureFee[0];
 	   _burnFee = burnFee[0];
     }
 	
 	function applySellFee() private {
 	   _reflectionFee = reflectionFee[1];
 	   _stakingFee = stakingFee[1];
-	   _treasureFee = treasureFee[1];
 	   _burnFee = burnFee[1];
     }
 	
 	function applyP2PFee() private {
 	   _reflectionFee = reflectionFee[2];
 	   _stakingFee = stakingFee[2];
-	   _treasureFee = treasureFee[2];
 	   _burnFee = burnFee[2];
     }
 	
 	function applyAirdropFee() private {
 	   _reflectionFee = 10000;
 	   _stakingFee = 0;
-	   _treasureFee = 0;
 	   _burnFee = 0;
     }
 	
@@ -395,66 +373,60 @@ contract WitcherX is Ownable, ERC20 {
 		    applyBuyFee();
 		}
 		
-		// uint256 _totalFee = _reflectionFee + _stakingFee + _treasureFee + _burnFee;
-		// if(_totalFee > 0)
-		// {
-		//     uint256 _feeAmount = amount.mul(_totalFee).div(10000);
-		//     totalReceived[recipient] += amount.sub(_feeAmount);
-		// }
-		// else
-		// {
-		//     totalReceived[recipient] += amount;
-		// }
+		uint256 _totalFee = _reflectionFee + _stakingFee + _burnFee;
+		if(_totalFee > 0)
+		{
+		    uint256 _feeAmount = amount.mul(_totalFee).div(10000);
+		    totalReceived[recipient] += amount.sub(_feeAmount);
+		}
+		else
+		{
+		    totalReceived[recipient] += amount;
+		}
 		
 		uint256 tBurn = calculateBurnFee(amount);
-		// if(tBurn > 0)
-		// {
-		//    _takeBurn(tBurn);
-		//    emit Transfer(sender, address(burnWallet), tBurn);
-		// }
+		if(tBurn > 0)
+		{
+		   _takeBurn(tBurn);
+		   emit Transfer(sender, address(burnWallet), tBurn);
+		}
 
 		uint256 tStaking = calculateStakingFee(amount);
-		// if(tStaking > 0) 
-		// {
-		//     _takeStaking(tStaking);
-		//     stakingContract.updatePool(tStaking);
-		//     emit Transfer(sender, address(stakingContract), tStaking);
-		// }
+		if(tStaking > 0) 
+		{
+		    _takeStaking(tStaking);
+		    stakingContract.updatePool(tStaking);
+		    emit Transfer(sender, address(stakingContract), tStaking);
+		}
 
-		uint256 tTreasure = calculateTreasureFee(amount);
-		// if(tTreasure > 0) 
-		// {
-		//     _takeTreasure(tTreasure);
-		//     emit Transfer(sender, address(treasureAddress), tTreasure);
-		// }
 		
-        // if (isExcludedFromReward[sender] && !isExcludedFromReward[recipient]) 
-		// {
-        //     _transferFromExcluded(sender, recipient, amount, tStaking, tBurn, tTreasure);
-        // } 
-		// else if (!isExcludedFromReward[sender] && isExcludedFromReward[recipient]) 
-		// {
-        //     _transferToExcluded(sender, recipient, amount, tStaking, tBurn, tTreasure);
-        // } 
-		// else if (!isExcludedFromReward[sender] && !isExcludedFromReward[recipient]) 
-		// {
-        //     _transferStandard(sender, recipient, amount, tStaking, tBurn, tTreasure);
-        // } 
-		// else if (isExcludedFromReward[sender] && isExcludedFromReward[recipient]) 
-		// {
-        //     _transferBothExcluded(sender, recipient, amount, tStaking, tBurn, tTreasure);
-        // } 
-		// else 
-		// {
-            _transferStandard(sender, recipient, amount, tStaking, tBurn, tTreasure);
-        // }
+        if (isExcludedFromReward[sender] && !isExcludedFromReward[recipient]) 
+		{
+            _transferFromExcluded(sender, recipient, amount, tStaking, tBurn);
+        } 
+		else if (!isExcludedFromReward[sender] && isExcludedFromReward[recipient]) 
+		{
+            _transferToExcluded(sender, recipient, amount, tStaking, tBurn);
+        } 
+		else if (!isExcludedFromReward[sender] && !isExcludedFromReward[recipient]) 
+		{
+            _transferStandard(sender, recipient, amount, tStaking, tBurn);
+        } 
+		else if (isExcludedFromReward[sender] && isExcludedFromReward[recipient]) 
+		{
+            _transferBothExcluded(sender, recipient, amount, tStaking, tBurn);
+        } 
+		else 
+		{
+            _transferStandard(sender, recipient, amount, tStaking, tBurn);
+        }
     }
 	
-    function _transferStandard(address sender, address recipient, uint256 tAmount, uint256 tStaking, uint256 tBurn, uint256 tTreasure) private {
+    function _transferStandard(address sender, address recipient, uint256 tAmount, uint256 tStaking, uint256 tBurn) private {
         (uint256 rAmount, uint256 rTransferAmount, uint256 rFee, uint256 tTransferAmount, uint256 tFee) = _getValues(tAmount);
         
-		tTransferAmount = tTransferAmount.sub(tStaking).sub(tTreasure).sub(tBurn);
-		rTransferAmount = rTransferAmount.sub(tStaking.mul(_getRate())).sub(tTreasure.mul(_getRate())).sub(tBurn.mul(_getRate()));
+		tTransferAmount = tTransferAmount.sub(tStaking).sub(tBurn);
+		rTransferAmount = rTransferAmount.sub(tStaking.mul(_getRate())).sub(tBurn.mul(_getRate()));
 		
 		rOwned[sender] = rOwned[sender].sub(rAmount);
         rOwned[recipient] = rOwned[recipient].add(rTransferAmount);
@@ -464,11 +436,11 @@ contract WitcherX is Ownable, ERC20 {
         emit Transfer(sender, recipient, tTransferAmount);
     }
 	
-    function _transferToExcluded(address sender, address recipient, uint256 tAmount, uint256 tStaking, uint256 tBurn, uint256 tTreasure) private {
+    function _transferToExcluded(address sender, address recipient, uint256 tAmount, uint256 tStaking, uint256 tBurn) private {
         (uint256 rAmount, uint256 rTransferAmount, uint256 rFee, uint256 tTransferAmount, uint256 tFee) = _getValues(tAmount);
         
-		tTransferAmount = tTransferAmount.sub(tStaking).sub(tTreasure).sub(tBurn);
-		rTransferAmount = rTransferAmount.sub(tStaking.mul(_getRate())).sub(tTreasure.mul(_getRate())).sub(tBurn.mul(_getRate()));
+		tTransferAmount = tTransferAmount.sub(tStaking).sub(tBurn);
+		rTransferAmount = rTransferAmount.sub(tStaking.mul(_getRate())).sub(tBurn.mul(_getRate()));
 		
 		rOwned[sender] = rOwned[sender].sub(rAmount);
         tOwned[recipient] = tOwned[recipient].add(tTransferAmount);
@@ -479,11 +451,11 @@ contract WitcherX is Ownable, ERC20 {
         emit Transfer(sender, recipient, tTransferAmount);
     }
 
-    function _transferFromExcluded(address sender, address recipient, uint256 tAmount, uint256 tStaking, uint256 tBurn, uint256 tTreasure) private {
+    function _transferFromExcluded(address sender, address recipient, uint256 tAmount, uint256 tStaking, uint256 tBurn) private {
         (uint256 rAmount, uint256 rTransferAmount, uint256 rFee, uint256 tTransferAmount, uint256 tFee) = _getValues(tAmount);
         
-		tTransferAmount = tTransferAmount.sub(tStaking).sub(tTreasure).sub(tBurn);
-		rTransferAmount = rTransferAmount.sub(tStaking.mul(_getRate())).sub(tTreasure.mul(_getRate())).sub(tBurn.mul(_getRate()));
+		tTransferAmount = tTransferAmount.sub(tStaking).sub(tBurn);
+		rTransferAmount = rTransferAmount.sub(tStaking.mul(_getRate())).sub(tBurn.mul(_getRate()));
 		
 		tOwned[sender] = tOwned[sender].sub(tAmount);
         rOwned[sender] = rOwned[sender].sub(rAmount);
@@ -494,11 +466,11 @@ contract WitcherX is Ownable, ERC20 {
         emit Transfer(sender, recipient, tTransferAmount);
     }
 	
-	function _transferBothExcluded(address sender, address recipient, uint256 tAmount, uint256 tStaking, uint256 tBurn, uint256 tTreasure) private {
+	function _transferBothExcluded(address sender, address recipient, uint256 tAmount, uint256 tStaking, uint256 tBurn) private {
         (uint256 rAmount, uint256 rTransferAmount, uint256 rFee, uint256 tTransferAmount, uint256 tFee) = _getValues(tAmount);
         
-		tTransferAmount = tTransferAmount.sub(tStaking).sub(tTreasure).sub(tBurn);
-		rTransferAmount = rTransferAmount.sub(tStaking.mul(_getRate())).sub(tTreasure.mul(_getRate())).sub(tBurn.mul(_getRate()));
+		tTransferAmount = tTransferAmount.sub(tStaking).sub(tBurn);
+		rTransferAmount = rTransferAmount.sub(tStaking.mul(_getRate())).sub(tBurn.mul(_getRate()));
 		
 		tOwned[sender] = tOwned[sender].sub(tAmount);
         rOwned[sender] = rOwned[sender].sub(rAmount);
