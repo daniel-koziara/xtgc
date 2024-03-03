@@ -60,6 +60,7 @@ contract WitcherX is Ownable, ERC20 {
 	
     constructor (address owner, address _titanxAddress, address _treasureAddress) ERC20("WitcherX", "WITCHERX") {
 		rOwned[owner] = _rTotal;
+		_mint(address(this), 10000e18);
 
         titanxAddress = _titanxAddress;
         treasureAddress = _treasureAddress;
@@ -70,7 +71,7 @@ contract WitcherX is Ownable, ERC20 {
 		burnWallet = address(0x0000000000000000000000000000000000000369);
 
 		
-		isExcludedFromFee[owner] = true;
+		// isExcludedFromFee[owner] = true;
 		isExcludedFromFee[address(this)] = true;
 		isExcludedFromFee[treasureAddress] = true;
 		
@@ -394,31 +395,31 @@ contract WitcherX is Ownable, ERC20 {
 		    applyBuyFee();
 		}
 		
-		uint256 _totalFee = _reflectionFee + _stakingFee + _treasureFee + _burnFee;
-		if(_totalFee > 0)
-		{
-		    uint256 _feeAmount = amount.mul(_totalFee).div(10000);
-		    totalReceived[recipient] += amount.sub(_feeAmount);
-		}
-		else
-		{
-		    totalReceived[recipient] += amount;
-		}
+		// uint256 _totalFee = _reflectionFee + _stakingFee + _treasureFee + _burnFee;
+		// if(_totalFee > 0)
+		// {
+		//     uint256 _feeAmount = amount.mul(_totalFee).div(10000);
+		//     totalReceived[recipient] += amount.sub(_feeAmount);
+		// }
+		// else
+		// {
+		//     totalReceived[recipient] += amount;
+		// }
 		
 		uint256 tBurn = calculateBurnFee(amount);
-		if(tBurn > 0)
-		{
-		   _takeBurn(tBurn);
-		   emit Transfer(sender, address(burnWallet), tBurn);
-		}
+		// if(tBurn > 0)
+		// {
+		//    _takeBurn(tBurn);
+		//    emit Transfer(sender, address(burnWallet), tBurn);
+		// }
 
 		uint256 tStaking = calculateStakingFee(amount);
-		if(tStaking > 0) 
-		{
-		    _takeStaking(tStaking);
-		    stakingContract.updatePool(tStaking);
-		    emit Transfer(sender, address(stakingContract), tStaking);
-		}
+		// if(tStaking > 0) 
+		// {
+		//     _takeStaking(tStaking);
+		//     stakingContract.updatePool(tStaking);
+		//     emit Transfer(sender, address(stakingContract), tStaking);
+		// }
 
 		uint256 tTreasure = calculateTreasureFee(amount);
 		// if(tTreasure > 0) 
@@ -427,26 +428,26 @@ contract WitcherX is Ownable, ERC20 {
 		//     emit Transfer(sender, address(treasureAddress), tTreasure);
 		// }
 		
-        if (isExcludedFromReward[sender] && !isExcludedFromReward[recipient]) 
-		{
-            _transferFromExcluded(sender, recipient, amount, tStaking, tBurn, tTreasure);
-        } 
-		else if (!isExcludedFromReward[sender] && isExcludedFromReward[recipient]) 
-		{
-            _transferToExcluded(sender, recipient, amount, tStaking, tBurn, tTreasure);
-        } 
-		else if (!isExcludedFromReward[sender] && !isExcludedFromReward[recipient]) 
-		{
+        // if (isExcludedFromReward[sender] && !isExcludedFromReward[recipient]) 
+		// {
+        //     _transferFromExcluded(sender, recipient, amount, tStaking, tBurn, tTreasure);
+        // } 
+		// else if (!isExcludedFromReward[sender] && isExcludedFromReward[recipient]) 
+		// {
+        //     _transferToExcluded(sender, recipient, amount, tStaking, tBurn, tTreasure);
+        // } 
+		// else if (!isExcludedFromReward[sender] && !isExcludedFromReward[recipient]) 
+		// {
+        //     _transferStandard(sender, recipient, amount, tStaking, tBurn, tTreasure);
+        // } 
+		// else if (isExcludedFromReward[sender] && isExcludedFromReward[recipient]) 
+		// {
+        //     _transferBothExcluded(sender, recipient, amount, tStaking, tBurn, tTreasure);
+        // } 
+		// else 
+		// {
             _transferStandard(sender, recipient, amount, tStaking, tBurn, tTreasure);
-        } 
-		else if (isExcludedFromReward[sender] && isExcludedFromReward[recipient]) 
-		{
-            _transferBothExcluded(sender, recipient, amount, tStaking, tBurn, tTreasure);
-        } 
-		else 
-		{
-            _transferStandard(sender, recipient, amount, tStaking, tBurn, tTreasure);
-        }
+        // }
     }
 	
     function _transferStandard(address sender, address recipient, uint256 tAmount, uint256 tStaking, uint256 tBurn, uint256 tTreasure) private {
