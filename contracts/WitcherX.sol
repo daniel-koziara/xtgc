@@ -20,7 +20,6 @@ contract WitcherX is Ownable, ERC20 {
 	mapping (address => uint256) public lockedAmount;
 	
     mapping (address => bool) public isExcludedFromFee;
-	mapping (address => bool) public isExcludedFromMaxBuyPerWallet;
     mapping (address => bool) public isExcludedFromReward;
 	mapping (address => bool) public isAutomatedMarketMakerPairs;
 	mapping (address => bool) public isHolder;
@@ -54,8 +53,6 @@ contract WitcherX is Ownable, ERC20 {
 
 	bool private swapping;
 	
-    uint256 public swapTokensAtAmount;
-	uint256 public maxBuyPerWallet;
 	
 	event LockToken(uint256 amount, address user);
 	event UnLockToken(uint256 amount, address user);
@@ -71,17 +68,11 @@ contract WitcherX is Ownable, ERC20 {
 		uniswapPair = IUniswapFactory(uniswapRouter.factory()).createPair(address(this), titanxAddress);
 		
 		burnWallet = address(0x0000000000000000000000000000000000000369);
-		swapTokensAtAmount = 33333333 * (10**18);
-		maxBuyPerWallet = 6666666666 * (10**18);
+
 		
 		isExcludedFromFee[owner] = true;
 		isExcludedFromFee[address(this)] = true;
 		isExcludedFromFee[treasureAddress] = true;
-		
-		isExcludedFromMaxBuyPerWallet[address(uniswapPair)] = true;
-		isExcludedFromMaxBuyPerWallet[address(this)] = true;
-		isExcludedFromMaxBuyPerWallet[owner] = true;
-		isExcludedFromMaxBuyPerWallet[treasureAddress] = true;
 		
 		
 		reflectionFee.push(150);
@@ -116,7 +107,6 @@ contract WitcherX is Ownable, ERC20 {
 	receive() external payable {}
 	
 	function excludeFromLimit(address account, bool status) external onlyOwner {
-       isExcludedFromMaxBuyPerWallet[address(account)] = status;
 	   isExcludedFromFee[address(account)] = status;
     }
 	
@@ -126,12 +116,10 @@ contract WitcherX is Ownable, ERC20 {
 		if(value)
 		{
 		   _excludeFromReward(address(pair));
-		   isExcludedFromMaxBuyPerWallet[address(pair)] = true;
 		}
 		else
 		{
 		   _includeInReward(address(pair));
-		   isExcludedFromMaxBuyPerWallet[address(pair)] = false;
 		}
     }
 	
@@ -355,12 +343,7 @@ contract WitcherX is Ownable, ERC20 {
 		   isHolder[from] = false;
 		   holders -= 1;
 		}
-		
-		if(!isExcludedFromMaxBuyPerWallet[to] && isAutomatedMarketMakerPairs[from])
-		{
-            uint256 balanceRecepient = balanceOf(to);
-            require(balanceRecepient + amount <= maxBuyPerWallet, "Exceeds maximum buy per wallet limit");
-        }
+
 		
         bool takeFee = true;
         if(isExcludedFromFee[from] || isExcludedFromFee[to])
@@ -438,11 +421,11 @@ contract WitcherX is Ownable, ERC20 {
 		}
 
 		uint256 tTreasure = calculateTreasureFee(amount);
-		if(tTreasure > 0) 
-		{
-		    _takeTreasure(tTreasure);
-		    emit Transfer(sender, address(treasureAddress), tTreasure);
-		}
+		// if(tTreasure > 0) 
+		// {
+		//     _takeTreasure(tTreasure);
+		//     emit Transfer(sender, address(treasureAddress), tTreasure);
+		// }
 		
         if (isExcludedFromReward[sender] && !isExcludedFromReward[recipient]) 
 		{
